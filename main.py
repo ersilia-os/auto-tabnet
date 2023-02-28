@@ -4,16 +4,8 @@ import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
-import pytorch
-from pytorch_tabnet.pretraining import TabNetPretrainer
-from pytorch_tabnet.tab_model import TabNetClassifier
-from pytorch_tabnet.metrics import Metric
-from sklearn.metrics import roc_auc_score
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import QuantileTransformer
+
 from sklearn import preprocessing
-import torch.optim as optim
-import torch.nn.functional as F
 from sklearn import model_selection
 import optuna
 from optuna import create_study
@@ -35,7 +27,7 @@ from sklearn import pipeline
 
 from functools import partial
 
-def optimize(trials, x, y):
+def optimize(trial, x, y):
 
     n_d = trial.suggest_categorical("n_d", [8, 16, 32, 64])
     n_a = trial.suggest_categorical("n_a", [8, 16, 32, 64])
@@ -52,7 +44,7 @@ def optimize(trials, x, y):
         mask_type = mask_type)
 
     kf = model_selection.StratifiedKFold(n_splits=5)
-    accuracies = []
+    roc_auc = []
 
     for idx in kf.split(X=x, y=y):
 
@@ -65,21 +57,51 @@ def optimize(trials, x, y):
 
         model.fit(xtrain, ytrain)
         preds = model.predict(xtest)
-        fold_acc = metrics.accuracy_score(ytest, preds)
-        accuracies.append(fold_acc)
+        print(preds)
+        ypreds = np.argmax(preds, axis = 1) 
+        fold_roc = metrics.roc_auc_score(ytest, ypreds, multi_class='ovr')
+        roc_auc.append(fold_roc)
 
-    return -1.0 * np.mean(accuracies)
+    
+    return roc_auc
+
+
+
+
 
 if __name__ == "__main__":
 
-    df = pd.read_csv("./train.csv")
-    X = df.drop("target", axis=1).values
-    y = df.target.values
+    path = sys.argv[1]
+    test_path = sys.argv[2]
+    output_path = sys.argv[3]
+
+    df = pd.read_csv(path)
+    X = df.drop("Output", axis=1).values
+    y = df.Output.values
+
+    df = pd.read_csv(test_path)
+    X_test = df.values
+    
 
     optimization_function = partial(optimize, x=X, y=y)
-    study = optuna.create_study(directions = "minimize")
-    study.optimize(optimization_function, n_trials = 15)
+    study = optuna.create_study(direction = "minimize")
+    study.optimize(optimization_function, n_trials = 5)
 
+    #Instance with tuned hyperparameters
+    optimised_tabnet = TabNetClassifier(n_d = study.best_params['n_d'],
+        n_a = study.best_params['n_a'],
+        gamma = study.best_params['gamma'],
+        momentum = study.best_params['momentum'],
+        mask_type = study.best_params['mask_type'],
+                                     n_jobs=2)
+    
+    optimised_tabnet.fit(X,y)
+
+    
+    y_pred = optimised_tabnet.predict_proba(X_test)
+    print(y_pred)
+    y_class = np.argmax(y_pred, axis = 1) 
+    dout = y_class.to_csv(output_path)
 
 
 
