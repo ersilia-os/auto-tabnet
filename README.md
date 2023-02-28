@@ -1,4 +1,4 @@
-# auto-tabnet
+# Auto-Tabnet
 Auto-TabNet is the implementation of Google's TabNet model using dreamquark-ai's pytorch implementation along with hyperparameter search with Optuna.
 
 Google's TabNet was proposed in 2019 with the idea of effectively using deep neural networks for tabular data.
