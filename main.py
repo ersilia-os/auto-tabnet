@@ -58,8 +58,7 @@ def optimize(trial, x, y):
         model.fit(xtrain, ytrain)
         preds = model.predict(xtest)
         print(preds)
-        ypreds = np.argmax(preds, axis = 1) 
-        fold_roc = metrics.roc_auc_score(ytest, ypreds, multi_class='ovr')
+        fold_roc = metrics.roc_auc_score(ytest, preds, multi_class='ovr')
         roc_auc.append(fold_roc)
 
     
@@ -99,9 +98,8 @@ if __name__ == "__main__":
 
     
     y_pred = optimised_tabnet.predict_proba(X_test)
-    print(y_pred)
-    y_class = np.argmax(y_pred, axis = 1) 
-    dout = y_class.to_csv(output_path)
+    print(y_pred) 
+    dout = y_pred.to_csv(output_path)
 
 
 
