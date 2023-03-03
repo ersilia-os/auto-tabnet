@@ -27,21 +27,27 @@ from sklearn import pipeline
 
 from functools import partial
 
-def optimize(trial, x, y):
+def objective(trial, x, y):
 
-    n_d = trial.suggest_categorical("n_d", [8, 16, 32, 64])
-    n_a = trial.suggest_categorical("n_a", [8, 16, 32, 64])
-    gamma = trial.suggest_int("gamma", 1.0, 2.0)
-    momentum = trial.suggest_int("momentum", 0.01, 0.4)
+    n_d = trial.suggest_int("n_d", low = 8, high = 64, step = 8)
+    n_a = trial.suggest_int("n_a", low = 8, high = 64, step = 8)
+    gamma = trial.suggest_float("gamma", 1.0, 2.0)
+    momentum = trial.suggest_float("momentum", 0.01, 0.4)
     mask_type = trial.suggest_categorical("mask_type", ['sparsemax', 'entmax'])
 
     
-    model = TabNetClassifier(
-        n_d = n_d,
-        n_a = n_a,
-        gamma = gamma,
-        momentum = momentum,
-        mask_type = mask_type)
+    tabnet_params = dict(n_d=n_d, n_a=n_a, gamma=gamma,
+                     momentum = momentum,
+                     optimizer_fn=torch.optim.Adam,
+                     optimizer_params=dict(lr=2e-2, weight_decay=1e-5),
+                     mask_type = mask_type,
+                     scheduler_params=dict(mode="min",
+                                           patience=trial.suggest_int("patienceScheduler",low=3,high=10), # changing sheduler patience to be lower than early stopping patience 
+                                           min_lr=1e-5,
+                                           factor=0.5,),
+                     scheduler_fn=torch.optim.lr_scheduler.ReduceLROnPlateau,
+                     verbose=0,
+                     ) #early stopping
 
     kf = model_selection.StratifiedKFold(n_splits=5)
     roc_auc = []
@@ -51,18 +57,19 @@ def optimize(trial, x, y):
         train_idx, test_idx = idx[0], idx[1]
         xtrain  = x[train_idx]
         ytrain = y[train_idx]
-
+        
         xtest = x[test_idx]
         ytest = y[test_idx]
-
-        model.fit(xtrain, ytrain)
-        preds = model.predict(xtest)
+        
+        classifier = TabNetClassifier(**tabnet_params)
+        classifier.fit(xtrain, ytrain, max_epochs=trial.suggest_int('epochs', 1, 100))
+        preds = classifier.predict_proba(xtest)
         # print(preds)
         fold_roc = metrics.roc_auc_score(ytest, preds, multi_class='ovr')
         roc_auc.append(fold_roc)
 
     
-    return roc_auc
+    return max(roc_auc)
 
 
 
@@ -76,30 +83,46 @@ if __name__ == "__main__":
 
     df = pd.read_csv(path)
     X = df.drop("Output", axis=1).values
+    
     y = df.Output.values
+    print(len(y))
 
     df = pd.read_csv(test_path)
     X_test = df.values
     
 
-    optimization_function = partial(optimize, x=X, y=y)
+    
     study = optuna.create_study(direction = "minimize")
-    study.optimize(optimization_function, n_trials = 5)
+    study.optimize(lambda trial: objective(trial, X, y), n_trials=5)
 
     #Instance with tuned hyperparameters
-    optimised_tabnet = TabNetClassifier(n_d = study.best_params['n_d'],
+
+    
+    optimised_params = dict (n_d = study.best_params['n_d'],
         n_a = study.best_params['n_a'],
         gamma = study.best_params['gamma'],
         momentum = study.best_params['momentum'],
         mask_type = study.best_params['mask_type'],
-                                     n_jobs=2)
+        optimizer_fn=torch.optim.Adam,
+        optimizer_params=dict(lr=2e-2, weight_decay=1e-5),
+        scheduler_params=dict(mode="min",
+                              min_lr=1e-5,
+                              factor=0.5,),
+                              scheduler_fn=torch.optim.lr_scheduler.ReduceLROnPlateau,
+                              verbose=0,
+        )
     
-    optimised_tabnet.fit(X,y)
+    classifier = TabNetClassifier(**optimised_params)
+    classifier.fit(X_train = X, y_train = y, max_epochs = study.best_params['epochs'])
 
     
-    y_pred = optimised_tabnet.predict_proba(X_test)
+    y_pred = classifier.predict(X_test)
+    final_roc = metrics.roc_auc_score(y, classifier.predict_proba(X), multi_class='ovr')
+
+    print('roc_auc_score:', final_roc)
+    
     # print(y_pred) 
-    dout = y_pred.to_csv(output_path)
+    pd.DataFrame(y_pred).to_csv(output_path, index=False)
 
 
 
