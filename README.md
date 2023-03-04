@@ -9,11 +9,13 @@ TabNet is a complex model composed of a feature transformer, attentive transform
 
 ## Requirements
 
-- ```sh
+-
+ ```sh
 python 3.7 >
 ```
 
-- ```sh
+- 
+```sh
 pip (python package manager)
 ```
 
@@ -23,7 +25,7 @@ pip (python package manager)
 With pip:
 
 ```sh
-pip install auto-tabnet==1.0.0
+pip install auto-tabnet
 ```
 
 ## Source Code
