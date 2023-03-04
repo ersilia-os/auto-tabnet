@@ -127,3 +127,17 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+settings.json
+
+# Idea
+.idea/
+
+# Environments
+auto/
+
+.pypirc
+
+MANIFEST.in
+
+setup.cfg
