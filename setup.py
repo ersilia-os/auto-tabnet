@@ -1,10 +1,15 @@
-from distutils.core import setup
+from setuptools import setup
+
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
 
 setup(
-    name = 'auto-tabnet',
-    packages = ['auto-tabnet'],
-    version = 'v1.0.0',  # Ideally should be same as your GitHub release tag varsion
+    name = 'auto_tabnet',
+    packages = ['auto_tabnet'],
+    version = 'v1.0.0', 
     description = 'Automated implementation of Google TabNet.',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     author = 'Ersilia',
     author_email = 'hello@ersilia.io',
     url = 'https://github.com/ersilia-os/auto-tabnet',
