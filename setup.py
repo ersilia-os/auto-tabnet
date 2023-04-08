@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setup(
     name = 'auto_tabnet',
     packages = ['auto_tabnet'],
-    version = 'v1.0.0', 
+    version = 'v0.0.1', 
     description = 'Automated implementation of Google TabNet.',
     long_description=long_description,
     long_description_content_type='text/markdown',
