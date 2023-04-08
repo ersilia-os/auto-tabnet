@@ -15,13 +15,9 @@ This package facilitates the use of TabNet for training a classifier (regressor 
 
 # Pre-Requisites 
 
-```sh
-python 3.7
-```
+- python 3.7
 
-```sh
-pip (python package manager)
-```
+- pip (python package manager)
 
 
 # Installation
