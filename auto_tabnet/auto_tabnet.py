@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import torch
-from typing import Float, Dict
+from typing import Dict
 
 
 from sklearn import model_selection
@@ -141,7 +141,7 @@ class AutoTabnetClassifier():
         return self.y_pred
 
 
-    def get_roc_auc_score(self) -> Float :
+    def get_roc_auc_score(self) -> float :
         """Returns the roc_auc_score of the optimised TabnetClassifier
 
         Returns:
